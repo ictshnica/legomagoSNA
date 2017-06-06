@@ -1,0 +1,95 @@
+---
+title: "Social Network Analysis <br/> Home Assignment 3"
+author: '{Your Name}'
+date: "due date - 05.06.2017 23:59"
+output:
+  pdf_document:
+    toc: yes
+  html_document:
+    toc: yes
+---
+# Network communities
+Please send your reports to hse.ntwks@gmail.com with the subject of of the following structure:<br/>
+*[MAGOLEGO SNA 2017] {LastName} {First Name} HW{Number}*
+
+Late submission policy: -1 point per day
+
+Use this file as a template for your report.\
+Support your computations with figures and comments. Send ONLY .Rmd versions of your report.
+
+```{r, echo=FALSE}
+library(igraph)
+```
+
+
+## Yahoo Music Network
+
+For this assignment, you have to load [the part of Yahoo Music Network](https://drive.google.com/file/d/0Bwd5a7NScgMtNElfOFdSbE1UYnM/view). Archive contains network in GML format and corresponding list of artists.
+
+```{r}
+## Put your code here
+ g<-read.graph("music2K.gml",format=c("gml"))
+labe <- read.table("artists.txt",sep = "
+                   ")
+labe$V1=as.character(labe$V1)
+V(g)$name=labe$V1
+```
+
+Edges in this network appear if enough number of users have given ratings to both music bands. Note, that edges are weighted with similarity of the ratings.
+
+
+### 1. Preprocessing
+
+This network needs to be preprocessed. Do the steps, described on seminar, to make it look properly. How many vertices and edges were deleted?
+
+```{r}
+## Put your code here
+summary(g)
+g2 = delete.vertices(g, degree(g) == 0)
+g2=simplify(g2)
+summary(g2)
+```
+In second graph we removed 4 isolated nodes, because they don't have connections and there are no self-loops.
+
+### 2. Clustering
+
+Define clusters for this networks using one of the algorithms described on lectures and seminars:
+```{r}
+## Put your code here
+com <- fastgreedy.community(g2)
+```
+
+Compute density of obtained clusters:
+```{r}
+densi <- 1:length(com)
+internal <-  1:length(com)
+for (i in 1:length(com)) {
+  gg <- induced.subgraph(g2, which(com$membership == i))
+  internal[i] <- ecount(gg)
+  densi[i] <- graph.density(gg)
+}
+densi
+
+```
+
+Compute the ratio of inner clusters connections to outer ones:
+```{r}
+sum(internal) / ecount(g2)
+
+```
+
+
+### 3. Visualization & interpretation
+
+Visulize five of the most dense clusters. Use names of artists as node labels on the graph.
+```{r}
+densed <- which(densi %in% sort(densi, decreasing = TRUE)[1:5])
+t <- which(com$membership %in% densed)
+subg <- induced.subgraph(g2, which(membership(com) == 19&23&25&26&27))
+
+plot(subg,vertex.label=V(subg)$name)
+```
+
+<b> (Extra task) </b>Try to interpret (using Wikipedia or other resources) obtained clusters.
+
+Relying on information in wiki, I could say that they differentiate by genre.

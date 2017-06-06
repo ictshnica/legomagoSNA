@@ -1,0 +1,207 @@
+---
+title: "Social Network Analysis <br/> Home Assignment 4"
+author: '{Your Name}'
+date: "due date - 12.06.2016 23:59"
+output:
+  pdf_document:
+    toc: yes
+  html_document:
+    toc: yes
+---
+# Network Epidemics
+
+Please send your reports to hse.ntwks@gmail.com with the subject of of the following structure:<br/>
+*[MAGOLEGO SNA 2017] {LastName} {First Name} HW{Number}*
+
+Late submission policy: -2 points per day
+
+Use this file as a template for your report.\
+Support your computations with figures and comments. Send ONLY .Rmd versions of your report.
+
+```{r, echo=FALSE}
+library(igraph)
+```
+## SIR Model
+
+You need to perform epidemic SIR model on different types of networks:
+Try different parameters for network generation
+```{r}
+gl <- list()
+gl$ba <- barabasi.game(n = 5000,m = 8 , directed=FALSE)
+gl$er <- erdos.renyi.game(n = 5000, p.or.m = 0.002, type=c("gnp"))
+gl$ws <- watts.strogatz.game(dim = 1, size = 5000, nei = 3, p = 0.01)
+net <- read.table("Net.txt")
+net <- t(as.matrix(net))
+net <- net+1
+gl$net <- graph(net)
+``` 
+Moreover perform modeling on real peer-to-peer network [here](https://www.hse.ru/data/2016/04/21/1130159900/Net.txt)
+
+
+Your goal is to perform a research on epidemics:
+Use different values of parameters listed below
+```{r}
+beta <- 2
+gamma <- 4
+ntrials <- 100
+
+# Running function sir for each element of list gl (list with graphs)
+sim <- lapply(gl, sir, beta=beta, gamma=gamma, no.sim=ntrials)
+```
+at least 3 different versions, for example:
+
+* betta (4 6 8)
+* gamma (8 6 2)
+* niter (100 500 1000)
+    
+*For some reason `beta` and `gamma` parameters should not be set below 0 and 1. Looks like they are somehow normilized during simulation.*
+
+The code below can help you with plotting
+```{r}
+plot(sim$er)
+plot(sim$ba, color="palegoldenrod", median_color="gold", quantile_color="gold")
+plot(sim$ws, color="pink", median_color="red", quantile_color="red")
+
+x.max <- max(sapply(sapply(sim, time_bins), max))
+y.max <- 1.05 * max(sapply(sapply(sim, function(x) median(x)[["NI"]]), max, na.rm=TRUE))
+
+plot(time_bins(sim$er), median(sim$er)[["NI"]], type="l", lwd=2, col="blue", xlim=c(0, x.max), ylim=c(0, y.max), xlab="Time", ylab=expression(N[I](t)))
+lines(time_bins(sim$ba), median(sim$ba)[["NI"]], lwd=2, col="gold")
+lines(time_bins(sim$ws), median(sim$ws)[["NI"]],lwd=2, col="red")
+legend("topright", c("ER", "BA", "WS"),col=c("blue", "gold", "red"), lty=1)
+```
+
+You need to plot three values on the graphics: Number of infected, number of suseprible, number of recovered - all depends on time.
+As a result of this task, you need to provide 12 plots (one for each network with 3 diferent parameters) with explanation.
+
+```{r}
+beta <- 2
+gamma <- 4
+ntrials <- 100
+
+sim <- lapply(gl, sir, beta=beta, gamma=gamma, no.sim=ntrials)
+x.max <- max(sapply(sapply(sim, time_bins), max))
+y.max <- 1.05 * max(sapply(sapply(sim, function(x) median(x)[["NI"]]), max, na.rm=TRUE))
+
+plot(time_bins(sim$er), median(sim$er)[["NI"]], type="l", lwd=2, col="blue", xlim=c(0, x.max), ylim=c(0, y.max), xlab="Time", ylab=expression(N[I](t)))
+lines(time_bins(sim$ba), median(sim$ba)[["NI"]], lwd=2, col="gold")
+lines(time_bins(sim$ws), median(sim$ws)[["NI"]],lwd=2, col="red")
+lines(time_bins(sim$net), median(sim$net)[["NI"]],lwd=2, col="green")
+legend("topright", c("ER", "BA", "WS", "NET"),col=c("blue", "gold", "red", "green"), lty=1)
+
+y.max = 1.05 * max(sapply(sapply(sim, function(x) median(x)[["NS"]]), max, na.rm=TRUE))
+plot(time_bins(sim$er), median(sim$er)[["NS"]], type="l", lwd=2, col="blue", xlim=c(0, x.max), ylim=c(0, y.max), xlab="Time", ylab=expression(N[S](t)))
+lines(time_bins(sim$ba), median(sim$ba)[["NS"]], lwd=2, col="gold")
+lines(time_bins(sim$ws), median(sim$ws)[["NS"]],lwd=2, col="red")
+lines(time_bins(sim$net), median(sim$net)[["NS"]],lwd=2, col="green")
+legend("topright", c("ER", "BA", "WS", "NET"),col=c("blue", "gold", "red", "green"), lty=1)
+
+y.max = 1.05 * max(sapply(sapply(sim, function(x) median(x)[["NR"]]), max, na.rm=TRUE))
+max(sapply(sapply(sim, function(x) median(x)[["NR"]]), max, na.rm=TRUE))
+plot(time_bins(sim$er), median(sim$er)[["NR"]], type="l", lwd=2, col="blue", xlim=c(0, x.max), ylim=c(0, y.max), xlab="Time", ylab=expression(N[R](t)))
+lines(time_bins(sim$ba), median(sim$ba)[["NR"]], lwd=2, col="gold")
+lines(time_bins(sim$ws), median(sim$ws)[["NR"]],lwd=2, col="red")
+lines(time_bins(sim$net), median(sim$net)[["NR"]],lwd=2, col="green")
+legend("topright", c("ER", "BA", "WS", "NET"),col=c("blue", "gold", "red", "green"), lty=1)
+
+```
+
+Data dynamics is more likely to Renyi simulated model in this parameters excluded one case -- number of suseprible agents, because this line has tendency to trickle down, but in case of number of agents it lays between ER and WS.
+
+
+```{r}
+beta <- 4
+gamma <- 8
+ntrials <- 100
+
+sim <- lapply(gl, sir, beta=beta, gamma=gamma, no.sim=ntrials)
+x.max <- max(sapply(sapply(sim, time_bins), max))
+y.max <- 1.05 * max(sapply(sapply(sim, function(x) median(x)[["NI"]]), max, na.rm=TRUE))
+
+plot(time_bins(sim$er), median(sim$er)[["NI"]], type="l", lwd=2, col="blue", xlim=c(0, x.max), ylim=c(0, y.max), xlab="Time", ylab=expression(N[I](t)))
+lines(time_bins(sim$ba), median(sim$ba)[["NI"]], lwd=2, col="gold")
+lines(time_bins(sim$ws), median(sim$ws)[["NI"]],lwd=2, col="red")
+lines(time_bins(sim$net), median(sim$net)[["NI"]],lwd=2, col="green")
+legend("topright", c("ER", "BA", "WS", "NET"),col=c("blue", "gold", "red", "green"), lty=1)
+
+y.max = 1.05 * max(sapply(sapply(sim, function(x) median(x)[["NS"]]), max, na.rm=TRUE))
+plot(time_bins(sim$er), median(sim$er)[["NS"]], type="l", lwd=2, col="blue", xlim=c(0, x.max), ylim=c(0, y.max), xlab="Time", ylab=expression(N[S](t)))
+lines(time_bins(sim$ba), median(sim$ba)[["NS"]], lwd=2, col="gold")
+lines(time_bins(sim$ws), median(sim$ws)[["NS"]],lwd=2, col="red")
+lines(time_bins(sim$net), median(sim$net)[["NS"]],lwd=2, col="green")
+legend("topright", c("ER", "BA", "WS", "NET"),col=c("blue", "gold", "red", "green"), lty=1)
+
+y.max = 1.05 * max(sapply(sapply(sim, function(x) median(x)[["NR"]]), max, na.rm=TRUE))
+max(sapply(sapply(sim, function(x) median(x)[["NR"]]), max, na.rm=TRUE))
+plot(time_bins(sim$er), median(sim$er)[["NR"]], type="l", lwd=2, col="blue", xlim=c(0, x.max), ylim=c(0, y.max), xlab="Time", ylab=expression(N[R](t)))
+lines(time_bins(sim$ba), median(sim$ba)[["NR"]], lwd=2, col="gold")
+lines(time_bins(sim$ws), median(sim$ws)[["NR"]],lwd=2, col="red")
+lines(time_bins(sim$net), median(sim$net)[["NR"]],lwd=2, col="green")
+legend("topright", c("ER", "BA", "WS", "NET"),col=c("blue", "gold", "red", "green"), lty=1)
+```
+
+On these models we can see that number of regenerated people grows up extremely by the time and it is difficult to talk about epidemy in order to new illness cases too.
+
+```{r}
+beta <- 6
+gamma <- 6
+ntrials <- 500
+
+sim <- lapply(gl, sir, beta=beta, gamma=gamma, no.sim=ntrials)
+x.max <- max(sapply(sapply(sim, time_bins), max))
+y.max <- 1.05 * max(sapply(sapply(sim, function(x) median(x)[["NI"]]), max, na.rm=TRUE))
+
+plot(time_bins(sim$er), median(sim$er)[["NI"]], type="l", lwd=2, col="blue", xlim=c(0, x.max), ylim=c(0, y.max), xlab="Time", ylab=expression(N[I](t)))
+lines(time_bins(sim$ba), median(sim$ba)[["NI"]], lwd=2, col="gold")
+lines(time_bins(sim$ws), median(sim$ws)[["NI"]],lwd=2, col="red")
+lines(time_bins(sim$net), median(sim$net)[["NI"]],lwd=2, col="green")
+legend("topright", c("ER", "BA", "WS", "NET"),col=c("blue", "gold", "red", "green"), lty=1)
+
+y.max = 1.05 * max(sapply(sapply(sim, function(x) median(x)[["NS"]]), max, na.rm=TRUE))
+plot(time_bins(sim$er), median(sim$er)[["NS"]], type="l", lwd=2, col="blue", xlim=c(0, x.max), ylim=c(0, y.max), xlab="Time", ylab=expression(N[S](t)))
+lines(time_bins(sim$ba), median(sim$ba)[["NS"]], lwd=2, col="gold")
+lines(time_bins(sim$ws), median(sim$ws)[["NS"]],lwd=2, col="red")
+lines(time_bins(sim$net), median(sim$net)[["NS"]],lwd=2, col="green")
+legend("topright", c("ER", "BA", "WS", "NET"),col=c("blue", "gold", "red", "green"), lty=1)
+
+y.max = 1.05 * max(sapply(sapply(sim, function(x) median(x)[["NR"]]), max, na.rm=TRUE))
+max(sapply(sapply(sim, function(x) median(x)[["NR"]]), max, na.rm=TRUE))
+plot(time_bins(sim$er), median(sim$er)[["NR"]], type="l", lwd=2, col="blue", xlim=c(0, x.max), ylim=c(0, y.max), xlab="Time", ylab=expression(N[R](t)))
+lines(time_bins(sim$ba), median(sim$ba)[["NR"]], lwd=2, col="gold")
+lines(time_bins(sim$ws), median(sim$ws)[["NR"]],lwd=2, col="red")
+lines(time_bins(sim$net), median(sim$net)[["NR"]],lwd=2, col="green")
+legend("topright", c("ER", "BA", "WS", "NET"),col=c("blue", "gold", "red", "green"), lty=1)
+```
+These models have same parameters of alpha and beta and there we can see dynamical process of WS model, which began fluctuating in number of recovered people which is close to epidemy flows.
+
+```{r}
+beta <- 8
+gamma <- 2
+ntrials <- 1000
+
+sim <- lapply(gl, sir, beta=beta, gamma=gamma, no.sim=ntrials)
+x.max <- max(sapply(sapply(sim, time_bins), max))
+y.max <- 1.05 * max(sapply(sapply(sim, function(x) median(x)[["NI"]]), max, na.rm=TRUE))
+
+plot(time_bins(sim$er), median(sim$er)[["NI"]], type="l", lwd=2, col="blue", xlim=c(0, x.max), ylim=c(0, y.max), xlab="Time", ylab=expression(N[I](t)))
+lines(time_bins(sim$ba), median(sim$ba)[["NI"]], lwd=2, col="gold")
+lines(time_bins(sim$ws), median(sim$ws)[["NI"]],lwd=2, col="red")
+lines(time_bins(sim$net), median(sim$net)[["NI"]],lwd=2, col="green")
+legend("topright", c("ER", "BA", "WS", "NET"),col=c("blue", "gold", "red", "green"), lty=1)
+
+y.max = 1.05 * max(sapply(sapply(sim, function(x) median(x)[["NS"]]), max, na.rm=TRUE))
+plot(time_bins(sim$er), median(sim$er)[["NS"]], type="l", lwd=2, col="blue", xlim=c(0, x.max), ylim=c(0, y.max), xlab="Time", ylab=expression(N[S](t)))
+lines(time_bins(sim$ba), median(sim$ba)[["NS"]], lwd=2, col="gold")
+lines(time_bins(sim$ws), median(sim$ws)[["NS"]],lwd=2, col="red")
+lines(time_bins(sim$net), median(sim$net)[["NS"]],lwd=2, col="green")
+legend("topright", c("ER", "BA", "WS", "NET"),col=c("blue", "gold", "red", "green"), lty=1)
+
+y.max = 1.05 * max(sapply(sapply(sim, function(x) median(x)[["NR"]]), max, na.rm=TRUE))
+max(sapply(sapply(sim, function(x) median(x)[["NR"]]), max, na.rm=TRUE))
+plot(time_bins(sim$er), median(sim$er)[["NR"]], type="l", lwd=2, col="blue", xlim=c(0, x.max), ylim=c(0, y.max), xlab="Time", ylab=expression(N[R](t)))
+lines(time_bins(sim$ba), median(sim$ba)[["NR"]], lwd=2, col="gold")
+lines(time_bins(sim$ws), median(sim$ws)[["NR"]],lwd=2, col="red")
+lines(time_bins(sim$net), median(sim$net)[["NR"]],lwd=2, col="green")
+legend("topright", c("ER", "BA", "WS", "NET"),col=c("blue", "gold", "red", "green"), lty=1)
+```
+When the beta parameter is higher we can observe that the start point of number of infected  people takes maximum and then it becoming lower with thw parameter of recovered people too.
